@@ -1,0 +1,42 @@
+# Backend Mimari Rehberi
+
+Bu döküman, projenin modüler monolit yapısını ve dosya bazlı sorumluluk sınırlarını tanımlar. Geliştirme sürecinde bu kurallara uyulması zorunludur.
+
+## 📁 Ana Dosyalar
+
+* **`src/server.ts`**: Uygulamanın giriş noktasıdır; HTTP sunucusunu başlatır ve veritabanı bağlantısını tetikler. **Ne Yapılmamalı:** İş mantığı veya route tanımlamaları buraya yazılmamalıdır.
+* **`src/app.ts`**: Express uygulamasının yapılandırıldığı, middleware'lerin ve rotaların (routes) bağlandığı yerdir. **Ne Yapılmamalı:** Sunucu dinleme (`app.listen`) işlemi burada yapılmamalıdır.
+
+## ⚙️ Yapılandırma (config/)
+
+* **`cors.ts`**: Uygulamanın hangi alan adlarından (origin) istek alabileceğini belirleyen güvenlik ayarıdır. **Ne Yapılmamalı:** Geliştirme ortamı dışında `origin: '*'` gibi güvensiz ayarlar bırakılmamalıdır.
+* **`env.ts`**: `.env` dosyasındaki değişkenleri `Joi` ile doğrular ve merkezi bir `config` objesi oluşturur. **Ne Yapılmamalı:** Uygulama içerisinde `process.env` doğrudan kullanılmamalı; her zaman bu dosya üzerinden erişilmelidir.
+
+## 🧠 Çekirdek Yapı (core/)
+
+### Constants
+
+* **`errorCodes.ts`**: Tüm hata kodlarının, mesajlarının ve HTTP statülerinin tanımlandığı merkezi sözlüktür. **Ne Yapılmamalı:** Servisler içinde "Elle yazılmış" (hardcoded) hata mesajları kullanılmamalıdır.
+* **`messages.ts`**: Başarılı işlemler sonucunda dönülecek standart kullanıcı mesajlarını içerir. **Ne Yapılmamalı:** API yanıtlarında Türkçe/İngilizce karmaşası yaratılmamalıdır.
+* **`roles.ts` & `status.ts**`: Kullanıcı yetkilerini ve kayıt durumlarını (active, pending vb.) standardize eder. **Ne Yapılmamalı:** DB sorgularında string ifadeler yerine buradaki sabitler kullanılmalıdır.
+* **`notificationTemplates.ts`**: Sistem bildirimlerinin metin şablonlarını yönetir. **Ne Yapılmamalı:** Bildirim metinleri kodun içine gömülmemelidir.
+
+### Middlewares
+
+* **`auth.ts`**: Gelen isteklerdeki JWT token'ını doğrular ve kullanıcı bilgisini `req.user`'a ekler. **Ne Yapılmamalı:** Yetkilendirme mantığı controller dosyalarına taşınmamalıdır.
+* **`errorHandler.ts`**: Uygulamada fırlatılan tüm hataları yakalar ve kullanıcıya profesyonel bir JSON döner. **Ne Yapılmamalı:** Controller içinde her yerde uzun `try-catch` blokları yazılmamalıdır.
+* **`validator.ts`**: Gelen veriyi (body, query, params) Joi şemalarıyla kapıda doğrular. **Ne Yapılmamalı:** Kirli veya eksik veri servis katmanına sızdırılmamalıdır.
+* **`rateLimiter.ts`**: API'yi brute-force ve spam saldırılarına karşı korur. **Ne Yapılmamalı:** Kritik endpoint'ler (Login, Register) korumasız bırakılmamalıdır.
+
+## 🛠️ Yardımcı Araçlar (utils/)
+
+* **`logger.ts`**: Sistemdeki tüm olayları (info, error, warn) seviyeli bir şekilde kaydeder. **Ne Yapılmamalı:** `console.log` kullanımı yasaktır; tüm izleme bu dosya üzerinden yapılmalıdır.
+* **`appError.ts`**: Operasyonel hataları standart bir formatta fırlatmak için kullanılan sınıftır. **Ne Yapılmamalı:** Standart `Error` sınıfı yerine her zaman bu sınıf genişletilmelidir.
+* **`responseHelper.ts`**: Tüm API yanıtlarının aynı JSON formatında (success, data, message) dönmesini sağlar. **Ne Yapılmamalı:** Her controller'da farklı bir JSON yapısı oluşturulmamalıdır.
+
+## 🌐 Altyapı ve Modüller (infra/ & modules/)
+
+* **`infra/database.ts`**: Veritabanı (Mongoose) bağlantı ayarlarını ve yaşam döngüsünü yönetir. **Ne Yapılmamalı:** DB bağlantı logic'i modüllerin içine dağıtılmamalıdır.
+* **`modules/`**: Uygulamanın asıl işini yapan özelliklerin (Auth, Agents vb.) toplandığı klasördür. **Ne Yapılmamalı:** Modüller birbirinin veritabanına doğrudan erişmemeli; iletişim servisler üzerinden kurulmalıdır.
+
+---
